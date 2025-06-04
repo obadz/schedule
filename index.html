@@ -92,7 +92,7 @@
     let combinedMode = false;
     let prevName = "";
     let allTimezones = [];
-    let pageTitle = "";
+    let pageTitle = "Availability Calendar";
 
     document.addEventListener("DOMContentLoaded", () => {
       parseHash();
@@ -124,7 +124,7 @@
       const params = new URLSearchParams(hash);
       if (params.has("days")) {
         const range = params.get("days");
-        const parts = range.split("-");
+        const parts = range.split(",");
         if (parts.length === 2) {
           const start = new Date(parts[0]);
           const end = new Date(parts[1]);
@@ -249,8 +249,11 @@
         // Only include start and end days in the URL
         const baseJson = btoa(JSON.stringify(allUserAvailability));
         const hashParts = [];
+        if (pageTitle) {
+          hashParts.push(`title=${encodeURIComponent(pageTitle)}`);
+        }
         if (days.length > 0) {
-          hashParts.push(`days=${days[0]}-${days[days.length-1]}`);
+          hashParts.push(`days=${days[0]},${days[days.length-1]}`);
         }
         if (hours.length > 0) {
           hashParts.push(`hours=${hours[0]}-${hours[hours.length-1]}`);
@@ -477,7 +480,7 @@
 
     function renderPageTitle() {
       const el = document.getElementById("pageTitle");
-      el.textContent = pageTitle || "Availability Calendar";
+      el.textContent = pageTitle;
     }
   </script>
 </body>
