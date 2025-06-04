@@ -202,10 +202,15 @@
         const out = document.getElementById("jsonOutput"); out.select(); document.execCommand("copy");
       });
       document.getElementById("copyUrlBtn").addEventListener("click", () => {
+        // Only include start and end days in the URL
         const baseJson = btoa(JSON.stringify(allUserAvailability));
         const hashParts = [];
-        hashParts.push(`days=${days.join(",").replace(/,/g, "-")}`);
-        hashParts.push(`hours=${hours[0]}-${hours[hours.length-1]}`);
+        if (days.length > 0) {
+          hashParts.push(`days=${days[0]}-${days[days.length-1]}`);
+        }
+        if (hours.length > 0) {
+          hashParts.push(`hours=${hours[0]}-${hours[hours.length-1]}`);
+        }
         hashParts.push(`data=${baseJson}`);
         const newUrl = `${location.origin}${location.pathname}#${hashParts.join("&")}`;
         navigator.clipboard.writeText(newUrl);
