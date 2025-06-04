@@ -23,9 +23,11 @@
     .json-area, .load-area { margin-top: 20px; }
     textarea { width: 100%; height: 120px; }
     button { margin-top: 5px; padding: 5px 10px; }
+    .page-title { font-size: 2em; margin-bottom: 20px; }
   </style>
 </head>
 <body>
+  <div id="pageTitle" class="page-title"></div>
   <div class="controls">
     <label for="timezoneInput">Timezone:</label>
     <input list="timezoneList" id="timezoneInput" placeholder="Search timezones">
@@ -57,9 +59,11 @@
     let combinedMode = false;
     let prevName = "";
     let allTimezones = [];
+    let pageTitle = "";
 
     document.addEventListener("DOMContentLoaded", () => {
       parseHash();
+      renderPageTitle();
       initTimezoneInput();
       initCurrentUser();
       renderCalendar();
@@ -108,6 +112,13 @@
           Object.assign(allUserAvailability, obj);
           combinedMode = true;
         } catch {}
+      }
+      if (params.has("title")) {
+        try {
+          pageTitle = decodeURIComponent(params.get("title").replace(/\+/g, " "));
+        } catch {
+          pageTitle = params.get("title");
+        }
       }
     }
 
@@ -346,6 +357,11 @@
         renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
       });
       container.appendChild(newBtn);
+    }
+
+    function renderPageTitle() {
+      const el = document.getElementById("pageTitle");
+      el.textContent = pageTitle || "Availability Calendar";
     }
   </script>
 </body>
