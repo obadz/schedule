@@ -46,6 +46,21 @@
 </head>
 <body>
   <div id="pageTitle" class="page-title"></div>
+
+  <div style="margin-bottom:18px; padding:12px; background:#f9fbe7; border:1px solid #e6ee9c; border-radius:6px;">
+    <b>Instructions:</b>
+    <ul style="margin: 8px 0 8px 22px;">
+      <li>Click on the calendar to mark times that are <span style="background:#ffe0b2; padding:2px 6px; border-radius:3px;">not great</span> or <span style="background:#ffcdd2; padding:2px 6px; border-radius:3px;">bad</span> for you to meet.</li>
+      <li>When done, click <b>Copy Availability</b> and paste it into email to the organizer.</li>
+    </ul>
+    <div>
+      <b>Legend: Time slot is </b>
+      <span style="display:inline-block; background:#c8e6c9; width:18px; height:18px; border:1px solid #ccc; vertical-align:middle; margin:0 4px 0 12px;"></span> Good &nbsp;
+      <span style="display:inline-block; background:#ffe0b2; width:18px; height:18px; border:1px solid #ccc; vertical-align:middle; margin:0 4px 0 12px;"></span> Not great &nbsp;
+      <span style="display:inline-block; background:#ffcdd2; width:18px; height:18px; border:1px solid #ccc; vertical-align:middle; margin:0 4px 0 12px;"></span> Bad
+    </div>
+  </div>
+
   <div class="controls">
     <label for="timezoneInput">Timezone:</label>
     <input list="timezoneList" id="timezoneInput" placeholder="Search timezones">
@@ -58,10 +73,10 @@
   <div id="calendarContainer"></div>
 
   <div class="json-area">
-    <label>Availability data (JSON):</label>
-    <pre id="jsonPretty"></pre>
-    <button id="copyJsonBtn">Copy JSON</button>
+    <button id="copyJsonBtn">Copy Availability</button>
     <button id="copyUrlBtn">Copy URL</button>
+    <label style="display:block; margin-top:10px;">Availability data (JSON):</label>
+    <pre id="jsonPretty"></pre>
   </div>
 
   <div class="load-area">
@@ -87,6 +102,21 @@
       renderCalendar();
       setupControls();
       updateJsonOutput();
+      // Re-parse hash when it changes (e.g., user edits URL and presses enter)
+      window.addEventListener("hashchange", () => {
+        // Reset state
+        days = [];
+        hours = [];
+        for (const k in allUserAvailability) delete allUserAvailability[k];
+        combinedMode = false;
+        prevName = "";
+        pageTitle = "";
+        parseHash();
+        renderPageTitle();
+        initCurrentUser();
+        renderCalendar();
+        updateJsonOutput();
+      });
     });
 
     function parseHash() {
@@ -199,8 +229,22 @@
       });
 
       document.getElementById("copyJsonBtn").addEventListener("click", () => {
-        const out = document.getElementById("jsonOutput"); out.select(); document.execCommand("copy");
+        // Copy the JSON from the pretty area (not the DOM, just the raw JSON)
+        const jsonStr = JSON.stringify(allUserAvailability, null, 2);
+        // Use Clipboard API if available, fallback to execCommand
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(jsonStr);
+        } else {
+          // fallback for older browsers
+          const temp = document.createElement("textarea");
+          temp.value = jsonStr;
+          document.body.appendChild(temp);
+          temp.select();
+          document.execCommand("copy");
+          document.body.removeChild(temp);
+        }
       });
+
       document.getElementById("copyUrlBtn").addEventListener("click", () => {
         // Only include start and end days in the URL
         const baseJson = btoa(JSON.stringify(allUserAvailability));
@@ -212,7 +256,14 @@
           hashParts.push(`hours=${hours[0]}-${hours[hours.length-1]}`);
         }
         hashParts.push(`data=${baseJson}`);
-        const newUrl = `${location.origin}${location.pathname}#${hashParts.join("&")}`;
+        // Use file:// for local files, otherwise use location.origin
+        let baseUrl;
+        if (location.origin === "null" && location.protocol === "file:") {
+          baseUrl = `file://${location.pathname}`;
+        } else {
+          baseUrl = `${location.origin}${location.pathname}`;
+        }
+        const newUrl = `${baseUrl}#${hashParts.join("&")}`;
         navigator.clipboard.writeText(newUrl);
       });
 
@@ -254,7 +305,7 @@
         const labelTh = document.createElement("th");
         const sample = new Date(Date.UTC(parseInt(days[0].slice(0,4)), parseInt(days[0].slice(5,7))-1, parseInt(days[0].slice(8,10)), hour));
         const localTime = sample.toLocaleTimeString("en-US", {hour: "2-digit", minute: "2-digit", timeZone: tz, hour12: false});
-        labelTh.textContent = `${localTime} (UTC ${hour.toString().padStart(2,'0')}:00)`;
+        labelTh.textContent = localTime; // Only show local time, no UTC
         labelTh.addEventListener("click", () => toggleRow(hour));
         tr.appendChild(labelTh);
 
