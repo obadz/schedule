@@ -76,7 +76,7 @@
       <li>When done, click <b>Copy Availability</b> and paste it into email to the organizer.</li>
     </ul>
     <div>
-      <b>Legend: Time slot is </b>
+      <b>Legend:</b> Time slot is
       <span style="display:inline-block; background:#c8e6c9; width:18px; height:18px; border:1px solid #ccc; vertical-align:middle; margin:0 4px 0 12px;"></span> Good &nbsp;
       <span style="display:inline-block; background:#ffe0b2; width:18px; height:18px; border:1px solid #ccc; vertical-align:middle; margin:0 4px 0 12px;"></span> Not great &nbsp;
       <span style="display:inline-block; background:#ffcdd2; width:18px; height:18px; border:1px solid #ccc; vertical-align:middle; margin:0 4px 0 12px;"></span> Bad
@@ -115,10 +115,22 @@
     let allTimezones = [];
     let pageTitle = "Availability Calendar";
     
+    function getNextAnonymousName() {
+      let base = "Anonymous";
+      let counter = 1;
+      let finalName = base;
+      while (allUserAvailability[finalName]) {
+        counter++;
+        finalName = `${base}-${counter}`;
+      }
+      return finalName;
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       parseHash();
       renderPageTitle();
       initTimezoneInput();
+      document.getElementById("nameInput").value = getNextAnonymousName();
       initCurrentUser();
       renderCalendar();
       setupControls();
@@ -257,19 +269,6 @@
       });
       
       document.getElementById("copyUrlBtn").addEventListener("click", () => {
-        // Only include start and end days in the URL
-        const baseJson = btoa(JSON.stringify(allUserAvailability));
-        const hashParts = [];
-        if (pageTitle) {
-          hashParts.push(`title=${encodeURIComponent(pageTitle)}`);
-        }
-        if (days.length > 0) {
-          hashParts.push(`days=${days[0].toISOString().substring(0,10)},${days[days.length-1].toISOString().substring(0,10)}`);
-        }
-        if (hours.length > 0) {
-          hashParts.push(`hours=${hours[0]}-${hours[hours.length-1]}`);
-        }
-        hashParts.push(`data=${baseJson}`);
         // Use file:// for local files, otherwise use location.origin
         let baseUrl;
         if (location.origin === "null" && location.protocol === "file:") {
@@ -277,7 +276,7 @@
         } else {
           baseUrl = `${location.origin}${location.pathname}`;
         }
-        const newUrl = `${baseUrl}#${hashParts.join("&")}`;
+        const newUrl = `${baseUrl}#${getStateHash()}`;
         navigator.clipboard.writeText(newUrl);
       });
       
@@ -488,11 +487,10 @@
       updateHashFromState();
     }
     
-    function updateHashFromState() {
-      // Build URL hash from current state
+    function getStateHash() {
       const hashParts = [];
       
-      // Add title if present
+      // Add title if present and not default
       if (pageTitle && pageTitle !== "Availability Calendar") {
         hashParts.push(`title=${encodeURIComponent(pageTitle)}`);
       }
@@ -503,7 +501,7 @@
       }
       
       // Add hours range if not default 24h
-      if (hours.length > 0 && (hours[0] !== 0 || hours[hours.length-1] !== 23)) {
+      if (hours.length > 0) {
         hashParts.push(`hours=${hours[0]}-${hours[hours.length-1]}`);
       }
       
@@ -513,8 +511,11 @@
         hashParts.push(`data=${baseJson}`);
       }
       
-      // Only update if hash would change to avoid infinite hashchange loop
-      const newHash = hashParts.join("&");
+      return hashParts.join("&");
+    }
+
+    function updateHashFromState() {
+      const newHash = getStateHash();
       if (window.location.hash.substring(1) !== newHash) {
         window.location.hash = newHash;
       }
@@ -575,10 +576,7 @@
       newBtn.classList.add("new-user-btn");
       newBtn.textContent = "New user";
       newBtn.addEventListener("click", () => {
-        let base = "Anonymous";
-        let finalName = base;
-        let counter = 1;
-        while (allUserAvailability[finalName]) { counter++; finalName = `${base}-${counter}`; }
+        const finalName = getNextAnonymousName();
         allUserAvailability[finalName] = {};
         document.getElementById("nameInput").value = finalName;
         prevName = finalName;
@@ -588,11 +586,12 @@
     }
     
     function renderPageTitle() {
-      const el = document.getElementById("pageTitle");
-      el.textContent = pageTitle;
+      const title = pageTitle || "Availability Calendar";
+      document.title = title;
+      document.getElementById("pageTitle").textContent = title;
     }
   </script>
   <!-- The following line will be updated by the git hook -->
-<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 04 Jun 2025 18:30:06 +0100 <!-- LAST_COMMIT_TIME: Wed, 04 Jun 2025 18:30:06 +0100 --></div>
+<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 04 Jun 2025 18:56:27 +0100 <!-- LAST_COMMIT_TIME: Wed, 04 Jun 2025 18:56:27 +0100 --></div>
 </body>
 </html>
