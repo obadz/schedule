@@ -293,12 +293,22 @@
     function toggleColumn(day) {
       const currentName = getCurrentName();
       const userAvail = allUserAvailability[currentName];
+      // Determine current status for the column (use first hour as reference)
+      let firstStatus = 0;
+      if (userAvail[day]) {
+        const hh = hours[0].toString().padStart(2, '0');
+        const cur = userAvail[day][hh] === undefined ? 0 : userAvail[day][hh] === "not great" ? 1 : 2;
+        firstStatus = cur;
+      }
+      const nextStatus = (firstStatus + 1) % 3;
       hours.forEach(hour => {
         const hh = hour.toString().padStart(2,'0');
         if (!userAvail[day]) userAvail[day] = {};
-        const cur = userAvail[day][hh] === undefined ? 0 : userAvail[day][hh] === "not great" ? 1 : 2;
-        const nextStatus = (cur + 1) % 3;
-        if (nextStatus === 0) delete userAvail[day][hh]; else userAvail[day][hh] = nextStatus === 1 ? "not great" : "bad";
+        if (nextStatus === 0) {
+          delete userAvail[day][hh];
+        } else {
+          userAvail[day][hh] = nextStatus === 1 ? "not great" : "bad";
+        }
       });
       if (userAvail[day] && Object.keys(userAvail[day]).length === 0) delete userAvail[day];
       combinedMode = true; renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
@@ -307,12 +317,21 @@
     function toggleRow(hour) {
       const currentName = getCurrentName();
       const userAvail = allUserAvailability[currentName];
+      // Determine current status for the row (use first day as reference)
+      let firstStatus = 0;
+      const hh = hour.toString().padStart(2, '0');
+      if (userAvail[days[0]]) {
+        const cur = userAvail[days[0]][hh] === undefined ? 0 : userAvail[days[0]][hh] === "not great" ? 1 : 2;
+        firstStatus = cur;
+      }
+      const nextStatus = (firstStatus + 1) % 3;
       days.forEach(day => {
-        const hh = hour.toString().padStart(2,'0');
         if (!userAvail[day]) userAvail[day] = {};
-        const cur = userAvail[day][hh] === undefined ? 0 : userAvail[day][hh] === "not great" ? 1 : 2;
-        const nextStatus = (cur + 1) % 3;
-        if (nextStatus === 0) delete userAvail[day][hh]; else userAvail[day][hh] = nextStatus === 1 ? "not great" : "bad";
+        if (nextStatus === 0) {
+          delete userAvail[day][hh];
+        } else {
+          userAvail[day][hh] = nextStatus === 1 ? "not great" : "bad";
+        }
         if (userAvail[day] && Object.keys(userAvail[day]).length === 0) delete userAvail[day];
       });
       combinedMode = true; renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
