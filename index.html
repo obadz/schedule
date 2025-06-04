@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Availability Calendar</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .controls { margin-bottom: 20px; display: flex; align-items: center; flex-wrap: wrap; }
+    label { margin-right: 10px; }
+    select, input[type="text"] { margin-right: 20px; padding: 5px; }
+    #userList { margin-left: 20px; display: flex; flex-wrap: wrap; }
+    .user-item { display: inline-block; padding: 5px 10px; margin: 0 5px; background-color: #f0f0f0; border-radius: 4px; position: relative; cursor: pointer; }
+    .user-item .remove-user { position: absolute; top: 2px; right: 4px; cursor: pointer; color: #900; font-weight: bold; }
+    .new-user-btn { padding: 5px 10px; margin: 0 5px; background-color: #d0d0d0; border-radius: 4px; cursor: pointer; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; text-align: center; padding: 5px; min-width: 60px; cursor: pointer; vertical-align: top; position: relative; }
+    th { background-color: #f0f0f0; }
+    td.disabled { cursor: default; }
+    .status-good { background-color: #c8e6c9; }
+    .status-notgreat { background-color: #ffe0b2; }
+    .status-bad { background-color: #ffcdd2; }
+    .user-label { display: block; font-size: 10px; }
+    .json-area, .load-area { margin-top: 20px; }
+    textarea { width: 100%; height: 120px; }
+    button { margin-top: 5px; padding: 5px 10px; }
+    #tzSearch { margin-right: 10px; padding: 5px; }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <label for="tzSearch">Timezone Search:</label>
+    <input type="text" id="tzSearch" placeholder="Search timezones">
+    <select id="timezoneSelect"></select>
+    <label for="nameInput">Name:</label>
+    <input type="text" id="nameInput" placeholder="Your name">
+    <div id="userList"></div>
+  </div>
+
+  <div id="calendarContainer"></div>
+
+  <div class="json-area">
+    <label for="jsonOutput">Availability data (JSON):</label>
+    <textarea id="jsonOutput" readonly></textarea>
+    <button id="copyJsonBtn">Copy JSON</button>
+    <button id="copyUrlBtn">Copy URL</button>
+  </div>
+
+  <div class="load-area">
+    <label for="jsonInput">Paste availability JSON to merge:</label>
+    <textarea id="jsonInput" placeholder='{"Alice": {"2025-06-01": {"08": "not great"}}}'></textarea>
+    <button id="mergeBtn">Merge Availability</button>
+  </div>
+
+  <script>
+    let days = [];
+    let hours = [];
+    const allUserAvailability = {};
+    let combinedMode = false;
+    let prevName = "";
+    let allTimezones = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      parseHash();
+      initTimezoneDropdown();
+      initCurrentUser();
+      renderCalendar();
+      setupControls();
+      updateJsonOutput();
+    });
+
+    function parseHash() {
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      if (params.has("days")) {
+        const range = params.get("days");
+        const parts = range.split("-");
+        if (parts.length === 2) {
+          const start = new Date(parts[0]);
+          const end = new Date(parts[1]);
+          if (!isNaN(start) && !isNaN(end) && start <= end) {
+            const d = new Date(start);
+            while (d <= end) {
+              days.push(d.toISOString().substring(0, 10));
+              d.setUTCDate(d.getUTCDate() + 1);
+            }
+          }
+        }
+      }
+      if (params.has("hours")) {
+        const range = params.get("hours");
+        const parts = range.split("-").map(s => parseInt(s, 10));
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[0] <= parts[1]) {
+          for (let h = parts[0]; h <= parts[1]; h++) hours.push(h);
+        }
+      }
+      if (days.length === 0) {
+        const today = new Date();
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(today.getTime() + i * 86400000);
+          days.push(d.toISOString().substring(0, 10));
+        }
+      }
+      if (hours.length === 0) hours = Array.from({length:24}, (_,i) => i);
+
+      if (params.has("data")) {
+        try {
+          const decoded = atob(params.get("data"));
+          const obj = JSON.parse(decoded);
+          Object.assign(allUserAvailability, obj);
+          combinedMode = true;
+        } catch {}
+      }
+    }
+
+    function initTimezoneDropdown() {
+      const tzSelect = document.getElementById("timezoneSelect");
+      const tzSearch = document.getElementById("tzSearch");
+      if (typeof Intl.supportedValuesOf === "function") {
+        try { allTimezones = Intl.supportedValuesOf("timeZone"); } catch { allTimezones = []; }
+      }
+      if (!allTimezones.length) {
+        allTimezones = ["UTC","America/New_York","America/Chicago","America/Denver","America/Los_Angeles","Europe/London","Europe/Paris","Asia/Tokyo","Australia/Sydney"];
+      }
+      function populateOptions(filter = "") {
+        tzSelect.innerHTML = "";
+        const lower = filter.toLowerCase();
+        allTimezones.forEach(tz => {
+          if (!filter || tz.toLowerCase().includes(lower)) {
+            const opt = document.createElement("option"); opt.value = tz; opt.textContent = tz;
+            tzSelect.appendChild(opt);
+          }
+        });
+        const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (allTimezones.includes(userTZ) && (!filter || userTZ.toLowerCase().includes(filter.toLowerCase()))) {
+          tzSelect.value = userTZ;
+        }
+      }
+      populateOptions();
+      tzSearch.addEventListener("input", () => populateOptions(tzSearch.value));
+      tzSelect.addEventListener("change", renderCalendar);
+    }
+
+    function initCurrentUser() {
+      const name = getCurrentName();
+      if (!allUserAvailability[name]) {
+        allUserAvailability[name] = {};
+      }
+      prevName = name;
+      renderCombinedUsersList();
+    }
+
+    function getCurrentName() {
+      const val = document.getElementById("nameInput").value.trim();
+      return val ? val : "Anonymous";
+    }
+
+    function setupControls() {
+      const nameInput = document.getElementById("nameInput");
+      nameInput.addEventListener("focus", () => { prevName = getCurrentName(); });
+      nameInput.addEventListener("input", () => {
+        const newName = getCurrentName();
+        if (newName !== prevName) {
+          const data = allUserAvailability[prevName] || {};
+          let finalName = newName;
+          let counter = 1;
+          while (allUserAvailability[finalName] && finalName !== prevName) {
+            counter++; finalName = `${newName}-${counter}`;
+          }
+          delete allUserAvailability[prevName];
+          allUserAvailability[finalName] = data;
+          prevName = finalName;
+          document.getElementById("nameInput").value = finalName;
+          renderCombinedUsersList();
+        }
+        combinedMode = true;
+        renderCalendar(); updateJsonOutput();
+      });
+
+      document.getElementById("copyJsonBtn").addEventListener("click", () => {
+        const out = document.getElementById("jsonOutput"); out.select(); document.execCommand("copy");
+      });
+      document.getElementById("copyUrlBtn").addEventListener("click", () => {
+        const baseJson = btoa(JSON.stringify(allUserAvailability));
+        const hashParts = [];
+        hashParts.push(`days=${days.join(",").replace(/,/g, "-")}`);
+        hashParts.push(`hours=${hours[0]}-${hours[hours.length-1]}`);
+        hashParts.push(`data=${baseJson}`);
+        const newUrl = `${location.origin}${location.pathname}#${hashParts.join("&")}`;
+        navigator.clipboard.writeText(newUrl);
+      });
+
+      document.getElementById("mergeBtn").addEventListener("click", () => {
+        const text = document.getElementById("jsonInput").value.trim(); if (!text) return;
+        try {
+          const obj = JSON.parse(text);
+          Object.entries(obj).forEach(([name, avail]) => {
+            let finalName = name;
+            let counter = 1;
+            while (allUserAvailability[finalName]) { counter++; finalName = `${name}-${counter}`; }
+            allUserAvailability[finalName] = avail;
+          });
+          combinedMode = true;
+          renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+        } catch { alert("Invalid JSON. Expecting object keyed by names."); }
+      });
+    }
+
+    function renderCalendar() {
+      const container = document.getElementById("calendarContainer"); container.innerHTML = "";
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+      const emptyTh = document.createElement("th"); emptyTh.textContent = ""; headerRow.appendChild(emptyTh);
+      days.forEach(day => {
+        const th = document.createElement("th");
+        const weekday = new Date(day).toLocaleDateString(undefined, {weekday: 'short'});
+        th.innerHTML = `<div>${weekday}</div><div>${day}</div>`;
+        th.addEventListener("click", () => toggleColumn(day));
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow); table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      const tz = document.getElementById("timezoneSelect").value;
+      hours.forEach(hour => {
+        const tr = document.createElement("tr");
+        const labelTh = document.createElement("th");
+        const sample = new Date(Date.UTC(parseInt(days[0].slice(0,4)), parseInt(days[0].slice(5,7))-1, parseInt(days[0].slice(8,10)), hour));
+        const localTime = sample.toLocaleTimeString("en-US", {hour: "2-digit", minute: "2-digit", timeZone: tz, hour12: false});
+        labelTh.textContent = `${localTime} (UTC ${hour.toString().padStart(2,'0')}:00)`;
+        labelTh.addEventListener("click", () => toggleRow(hour));
+        tr.appendChild(labelTh);
+
+        days.forEach(day => {
+          const td = document.createElement("td");
+          const hh = hour.toString().padStart(2,'0');
+          const key = `${day}|${hh}`;
+          const { status, users } = getCellData(key);
+          setCellClass(td, status);
+          users.forEach(u => {
+            const span = document.createElement("span");
+            span.textContent = u.name;
+            span.classList.add("user-label");
+            span.style.color = u.status === 2 ? "#b71c1c" : "#e65100";
+            td.appendChild(span);
+          });
+          td.addEventListener("click", () => {
+            const currentName = getCurrentName();
+            const userAvail = allUserAvailability[currentName];
+            if (!userAvail[day]) userAvail[day] = {};
+            const cur = userAvail[day][hh] === undefined ? 0 : userAvail[day][hh] === "not great" ? 1 : 2;
+            const nextStatus = (cur + 1) % 3;
+            if (nextStatus === 0) delete userAvail[day][hh]; else userAvail[day][hh] = nextStatus === 1 ? "not great" : "bad";
+            if (userAvail[day] && Object.keys(userAvail[day]).length === 0) delete userAvail[day];
+            combinedMode = true;
+            renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+          });
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      container.appendChild(table);
+    }
+
+    function getCellData(key) {
+      let worst = 0;
+      const users = [];
+      Object.entries(allUserAvailability).forEach(([name, avail]) => {
+        const [day, hh] = key.split("|");
+        const dayObj = avail[day] || {};
+        const statusStr = dayObj[hh];
+        if (statusStr) {
+          const st = statusStr === "not great" ? 1 : 2;
+          if (st > worst) worst = st;
+          users.push({ name, status: st });
+        }
+      });
+      return { status: worst, users };
+    }
+
+    function setCellClass(td, status) {
+      td.classList.remove("status-good", "status-notgreat", "status-bad");
+      if (status === 0) td.classList.add("status-good");
+      else if (status === 1) td.classList.add("status-notgreat");
+      else if (status === 2) td.classList.add("status-bad");
+    }
+
+    function toggleColumn(day) {
+      const currentName = getCurrentName();
+      const userAvail = allUserAvailability[currentName];
+      hours.forEach(hour => {
+        const hh = hour.toString().padStart(2,'0');
+        if (!userAvail[day]) userAvail[day] = {};
+        const cur = userAvail[day][hh] === undefined ? 0 : userAvail[day][hh] === "not great" ? 1 : 2;
+        const nextStatus = (cur + 1) % 3;
+        if (nextStatus === 0) delete userAvail[day][hh]; else userAvail[day][hh] = nextStatus === 1 ? "not great" : "bad";
+      });
+      if (userAvail[day] && Object.keys(userAvail[day]).length === 0) delete userAvail[day];
+      combinedMode = true; renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+    }
+
+    function toggleRow(hour) {
+      const currentName = getCurrentName();
+      const userAvail = allUserAvailability[currentName];
+      days.forEach(day => {
+        const hh = hour.toString().padStart(2,'0');
+        if (!userAvail[day]) userAvail[day] = {};
+        const cur = userAvail[day][hh] === undefined ? 0 : userAvail[day][hh] === "not great" ? 1 : 2;
+        const nextStatus = (cur + 1) % 3;
+        if (nextStatus === 0) delete userAvail[day][hh]; else userAvail[day][hh] = nextStatus === 1 ? "not great" : "bad";
+        if (userAvail[day] && Object.keys(userAvail[day]).length === 0) delete userAvail[day];
+      });
+      combinedMode = true; renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+    }
+
+    function updateJsonOutput() {
+      document.getElementById("jsonOutput").value = JSON.stringify(allUserAvailability, null, 2);
+    }
+
+    function renderCombinedUsersList() {
+      const container = document.getElementById("userList"); container.innerHTML = "";
+      Object.keys(allUserAvailability).forEach(name => {
+        const div = document.createElement("div"); div.classList.add("user-item"); div.textContent = name;
+        div.addEventListener("click", () => {
+          document.getElementById("nameInput").value = name;
+          prevName = name;
+        });
+        const cross = document.createElement("span"); cross.textContent = "×"; cross.classList.add("remove-user");
+        cross.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (name === getCurrentName()) return;
+          delete allUserAvailability[name];
+          if (Object.keys(allUserAvailability).length <= 1) combinedMode = false;
+          renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+        });
+        div.appendChild(cross);
+        container.appendChild(div);
+      });
+      // New user button
+      const newBtn = document.createElement("div");
+      newBtn.classList.add("new-user-btn");
+      newBtn.textContent = "New user";
+      newBtn.addEventListener("click", () => {
+        let base = "Anonymous";
+        let finalName = base;
+        let counter = 1;
+        while (allUserAvailability[finalName]) { counter++; finalName = `${base}-${counter}`; }
+        allUserAvailability[finalName] = {};
+        document.getElementById("nameInput").value = finalName;
+        prevName = finalName;
+        combinedMode = true;
+        renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+      });
+      container.appendChild(newBtn);
+    }
+  </script>
+</body>
+</html>
