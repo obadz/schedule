@@ -252,7 +252,7 @@
           hashParts.push(`title=${encodeURIComponent(pageTitle)}`);
         }
         if (days.length > 0) {
-          hashParts.push(`days=${days[0]},${days[days.length-1]}`);
+          hashParts.push(`days=${days[0].toISOString().substring(0,10)},${days[days.length-1].toISOString().substring(0,10)}`);
         }
         if (hours.length > 0) {
           hashParts.push(`hours=${hours[0]}-${hours[hours.length-1]}`);
@@ -542,6 +542,6 @@
     }
   </script>
   <!-- The following line will be updated by the git hook -->
-<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 04 Jun 2025 16:08:33 +0100 <!-- LAST_COMMIT_TIME: Wed, 04 Jun 2025 16:08:33 +0100 --></div>
+<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 04 Jun 2025 16:52:07 +0100 <!-- LAST_COMMIT_TIME: Wed, 04 Jun 2025 16:52:07 +0100 --></div>
 </body>
 </html>
