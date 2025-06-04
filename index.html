@@ -289,7 +289,7 @@
       days.forEach(day => {
         const th = document.createElement("th");
         const weekday = day.toLocaleDateString(undefined, {weekday: 'short', timeZone: 'UTC'});
-        const dayStr = day.String().substring(0, 10);
+        const dayStr = day.toISOString().substring(0, 10);
         th.innerHTML = `<div>${weekday}</div><div>${dayStr}</div>`;
         th.addEventListener("click", () => toggleColumn(day));
         headerRow.appendChild(th);
@@ -537,6 +537,6 @@
     }
   </script>
   <!-- The following line will be updated by the git hook -->
-<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 04 Jun 2025 17:54:03 +0100 <!-- LAST_COMMIT_TIME: Wed, 04 Jun 2025 17:54:03 +0100 --></div>
+<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 04 Jun 2025 17:56:58 +0100 <!-- LAST_COMMIT_TIME: Wed, 04 Jun 2025 17:56:58 +0100 --></div>
 </body>
 </html>
