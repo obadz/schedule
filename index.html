@@ -230,13 +230,11 @@
       });
 
       document.getElementById("copyJsonBtn").addEventListener("click", () => {
-        // Copy the JSON from the pretty area (not the DOM, just the raw JSON)
-        const jsonStr = JSON.stringify(allUserAvailability, null, 2);
-        // Use Clipboard API if available, fallback to execCommand
+        // Copy the JSON as displayed (custom formatted)
+        const jsonStr = customJsonStringify(allUserAvailability);
         if (navigator.clipboard && window.isSecureContext) {
           navigator.clipboard.writeText(jsonStr);
         } else {
-          // fallback for older browsers
           const temp = document.createElement("textarea");
           temp.value = jsonStr;
           document.body.appendChild(temp);
