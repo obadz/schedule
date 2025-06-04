@@ -174,12 +174,7 @@
     function initTimezoneInput() {
       const tzInput = document.getElementById("timezoneInput");
       const tzList = document.getElementById("timezoneList");
-      if (typeof Intl.supportedValuesOf === "function") {
-        try { allTimezones = Intl.supportedValuesOf("timeZone"); } catch { allTimezones = []; }
-      }
-      if (!allTimezones.length) {
-        allTimezones = ["UTC","America/New_York","America/Chicago","America/Denver","America/Los_Angeles","Europe/London","Europe/Paris","Asia/Tokyo","Australia/Sydney"];
-      }
+      const allTimezones = Intl.supportedValuesOf("timeZone");
       // Populate datalist
       allTimezones.forEach(tz => {
         const opt = document.createElement("option"); opt.value = tz;
@@ -293,8 +288,8 @@
       const emptyTh = document.createElement("th"); emptyTh.textContent = ""; headerRow.appendChild(emptyTh);
       days.forEach(day => {
         const th = document.createElement("th");
-        const weekday = day.toLocaleDateString(undefined, {weekday: 'short'});
-        const dayStr = day.toISOString().substring(0, 10);
+        const weekday = day.toLocaleDateString(undefined, {weekday: 'short', timeZone: 'UTC'});
+        const dayStr = day.String().substring(0, 10);
         th.innerHTML = `<div>${weekday}</div><div>${dayStr}</div>`;
         th.addEventListener("click", () => toggleColumn(day));
         headerRow.appendChild(th);
@@ -542,6 +537,6 @@
     }
   </script>
   <!-- The following line will be updated by the git hook -->
-<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 04 Jun 2025 16:52:07 +0100 <!-- LAST_COMMIT_TIME: Wed, 04 Jun 2025 16:52:07 +0100 --></div>
+<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 04 Jun 2025 17:54:03 +0100 <!-- LAST_COMMIT_TIME: Wed, 04 Jun 2025 17:54:03 +0100 --></div>
 </body>
 </html>
