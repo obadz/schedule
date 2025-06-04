@@ -414,10 +414,64 @@
       combinedMode = true; renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
     }
 
+    // Custom JSON formatter: indent first 2 levels, then hours on one line
+    function customJsonStringify(obj) {
+      function isHourDict(val) {
+        // Heuristic: all keys are 2-digit numbers (00-23) and values are string or undefined
+        if (!val || typeof val !== "object" || Array.isArray(val)) return false;
+        const keys = Object.keys(val);
+        if (keys.length === 0) return false;
+        return keys.every(
+          k => /^\d\d$/.test(k) && (typeof val[k] === "string" || typeof val[k] === "undefined")
+        );
+      }
+
+      function format(obj, level) {
+        if (level === 2 && isHourDict(obj)) {
+          // Print all hours on one line
+          const entries = Object.entries(obj)
+            .map(([k, v]) => `"${k}": ${v === undefined ? "null" : JSON.stringify(v)}`);
+          return `{ ${entries.join(", ")} }`;
+        }
+        if (Array.isArray(obj)) {
+          return (
+            "[\n" +
+            obj.map(v => "  ".repeat(level + 1) + format(v, level + 1)).join(",\n") +
+            "\n" +
+            "  ".repeat(level) +
+            "]"
+          );
+        }
+        if (obj && typeof obj === "object") {
+          const keys = Object.keys(obj);
+          if (keys.length === 0) return "{}";
+          return (
+            "{\n" +
+            keys
+              .map(
+                k =>
+                  "  ".repeat(level + 1) +
+                  JSON.stringify(k) +
+                  ": " +
+                  format(obj[k], level + 1)
+              )
+              .join(",\n") +
+            "\n" +
+            "  ".repeat(level) +
+            "}"
+          );
+        }
+        return JSON.stringify(obj);
+      }
+      return format(obj, 0);
+    }
+
     function updateJsonOutput() {
-      const jsonStr = JSON.stringify(allUserAvailability, null, 2);
-      // document.getElementById("jsonOutput").value = jsonStr; // removed
+      // Use custom formatter for pretty JSON
+      const jsonStr = customJsonStringify(allUserAvailability);
       document.getElementById("jsonPretty").innerHTML = syntaxHighlight(jsonStr);
+      // Also update the hash when JSON changes (e.g. after merge)
+      updateHashFromState();
     }
 
     // Simple JSON syntax highlighter
