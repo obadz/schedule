@@ -7,7 +7,7 @@
     body { font-family: Arial, sans-serif; margin: 20px; }
     .controls { margin-bottom: 20px; display: flex; align-items: center; flex-wrap: wrap; }
     label { margin-right: 10px; }
-    select, input[type="text"] { margin-right: 20px; padding: 5px; }
+    select, input[type="text"], input[list] { margin-right: 20px; padding: 5px; }
     #userList { margin-left: 20px; display: flex; flex-wrap: wrap; }
     .user-item { display: inline-block; padding: 5px 10px; margin: 0 5px; background-color: #f0f0f0; border-radius: 4px; position: relative; cursor: pointer; }
     .user-item .remove-user { position: absolute; top: 2px; right: 4px; cursor: pointer; color: #900; font-weight: bold; }
@@ -23,14 +23,13 @@
     .json-area, .load-area { margin-top: 20px; }
     textarea { width: 100%; height: 120px; }
     button { margin-top: 5px; padding: 5px 10px; }
-    #tzSearch { margin-right: 10px; padding: 5px; }
   </style>
 </head>
 <body>
   <div class="controls">
-    <label for="tzSearch">Timezone Search:</label>
-    <input type="text" id="tzSearch" placeholder="Search timezones">
-    <select id="timezoneSelect"></select>
+    <label for="timezoneInput">Timezone:</label>
+    <input list="timezoneList" id="timezoneInput" placeholder="Search timezones">
+    <datalist id="timezoneList"></datalist>
     <label for="nameInput">Name:</label>
     <input type="text" id="nameInput" placeholder="Your name">
     <div id="userList"></div>
@@ -61,7 +60,7 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       parseHash();
-      initTimezoneDropdown();
+      initTimezoneInput();
       initCurrentUser();
       renderCalendar();
       setupControls();
@@ -112,32 +111,26 @@
       }
     }
 
-    function initTimezoneDropdown() {
-      const tzSelect = document.getElementById("timezoneSelect");
-      const tzSearch = document.getElementById("tzSearch");
+    function initTimezoneInput() {
+      const tzInput = document.getElementById("timezoneInput");
+      const tzList = document.getElementById("timezoneList");
       if (typeof Intl.supportedValuesOf === "function") {
         try { allTimezones = Intl.supportedValuesOf("timeZone"); } catch { allTimezones = []; }
       }
       if (!allTimezones.length) {
         allTimezones = ["UTC","America/New_York","America/Chicago","America/Denver","America/Los_Angeles","Europe/London","Europe/Paris","Asia/Tokyo","Australia/Sydney"];
       }
-      function populateOptions(filter = "") {
-        tzSelect.innerHTML = "";
-        const lower = filter.toLowerCase();
-        allTimezones.forEach(tz => {
-          if (!filter || tz.toLowerCase().includes(lower)) {
-            const opt = document.createElement("option"); opt.value = tz; opt.textContent = tz;
-            tzSelect.appendChild(opt);
-          }
-        });
-        const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        if (allTimezones.includes(userTZ) && (!filter || userTZ.toLowerCase().includes(filter.toLowerCase()))) {
-          tzSelect.value = userTZ;
-        }
-      }
-      populateOptions();
-      tzSearch.addEventListener("input", () => populateOptions(tzSearch.value));
-      tzSelect.addEventListener("change", renderCalendar);
+      // Populate datalist
+      allTimezones.forEach(tz => {
+        const opt = document.createElement("option"); opt.value = tz;
+        tzList.appendChild(opt);
+      });
+      const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      tzInput.value = userTZ;
+      tzInput.addEventListener("change", () => {
+        if (!allTimezones.includes(tzInput.value)) tzInput.value = userTZ;
+        renderCalendar();
+      });
     }
 
     function initCurrentUser() {
@@ -221,7 +214,7 @@
       thead.appendChild(headerRow); table.appendChild(thead);
 
       const tbody = document.createElement("tbody");
-      const tz = document.getElementById("timezoneSelect").value;
+      const tz = document.getElementById("timezoneInput").value;
       hours.forEach(hour => {
         const tr = document.createElement("tr");
         const labelTh = document.createElement("th");
