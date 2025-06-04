@@ -9,8 +9,29 @@
     label { margin-right: 10px; }
     select, input[type="text"], input[list] { margin-right: 20px; padding: 5px; }
     #userList { margin-left: 20px; display: flex; flex-wrap: wrap; }
-    .user-item { display: inline-block; padding: 5px 10px; margin: 0 5px; background-color: #f0f0f0; border-radius: 4px; position: relative; cursor: pointer; }
-    .user-item .remove-user { position: absolute; top: 2px; right: 4px; cursor: pointer; color: #900; font-weight: bold; }
+    .user-item { 
+      display: inline-block; 
+      padding: 5px 28px 5px 10px; 
+      margin: 0 5px; 
+      background-color: #f0f0f0; 
+      border-radius: 4px; 
+      position: relative; 
+      cursor: pointer; 
+    }
+    .user-item .remove-user { 
+      position: absolute; 
+      top: 0px; 
+      right: 0px;
+      width: 28px;
+      height: 28px;
+      line-height: 24px;
+      text-align: center;
+      cursor: pointer; 
+      color: #900; 
+      font-weight: bold;
+      font-size: 18px;
+      opacity: 0.7;
+    }
     .new-user-btn { padding: 5px 10px; margin: 0 5px; background-color: #d0d0d0; border-radius: 4px; cursor: pointer; }
     table { border-collapse: collapse; width: 100%; margin-top: 20px; }
     th, td { border: 1px solid #ccc; text-align: center; padding: 5px; min-width: 60px; cursor: pointer; vertical-align: top; position: relative; }
@@ -46,7 +67,7 @@
 </head>
 <body>
   <div id="pageTitle" class="page-title"></div>
-
+  
   <div style="margin-bottom:18px; padding:12px; background:#f9fbe7; border:1px solid #e6ee9c; border-radius:6px;">
     <b>Instructions:</b>
     <ul style="margin: 8px 0 8px 22px;">
@@ -61,7 +82,7 @@
       <span style="display:inline-block; background:#ffcdd2; width:18px; height:18px; border:1px solid #ccc; vertical-align:middle; margin:0 4px 0 12px;"></span> Bad
     </div>
   </div>
-
+  
   <div class="controls">
     <label for="timezoneInput">Timezone:</label>
     <input list="timezoneList" id="timezoneInput" placeholder="Search timezones">
@@ -70,31 +91,30 @@
     <input type="text" id="nameInput" placeholder="Your name">
     <div id="userList"></div>
   </div>
-
+  
   <div id="calendarContainer"></div>
-
+  
   <div class="json-area">
     <button id="copyJsonBtn">Copy Availability</button>
     <button id="copyUrlBtn">Copy URL</button>
     <label style="display:block; margin-top:10px;">Availability data (JSON):</label>
     <pre id="jsonPretty"></pre>
   </div>
-
+  
   <div class="load-area">
-      <label for="jsonInput">Paste availability JSON to merge:</label>
-      <textarea id="jsonInput" placeholder='{"Alice": {"2025-06-01": {"08": "not great"}}}' style="height: 240px; width: 100%; box-sizing: border-box;"></textarea>
-      <button id="mergeBtn">Merge Availability</button>
-    </div>
-
+    <label for="jsonInput">Paste availability JSON to merge:</label>
+    <textarea id="jsonInput" placeholder='{"Alice": {"2025-06-01": {"08": "not great"}}}' style="height: 240px; width: 100%; box-sizing: border-box;"></textarea>
+    <button id="mergeBtn">Merge Availability</button>
+  </div>
+  
   <script>
     let days = []; // will now be array of Date objects
     let hours = [];
     const allUserAvailability = {};
-    let combinedMode = false;
     let prevName = "";
     let allTimezones = [];
     let pageTitle = "Availability Calendar";
-
+    
     document.addEventListener("DOMContentLoaded", () => {
       parseHash();
       renderPageTitle();
@@ -109,7 +129,6 @@
         days = [];
         hours = [];
         for (const k in allUserAvailability) delete allUserAvailability[k];
-        combinedMode = false;
         prevName = "";
         pageTitle = "";
         parseHash();
@@ -119,7 +138,7 @@
         updateJsonOutput();
       });
     });
-
+    
     function parseHash() {
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
@@ -153,13 +172,12 @@
         }
       }
       if (hours.length === 0) hours = Array.from({length:24}, (_,i) => i);
-
+      
       if (params.has("data")) {
         try {
           const decoded = atob(params.get("data"));
           const obj = JSON.parse(decoded);
           Object.assign(allUserAvailability, obj);
-          combinedMode = true;
         } catch {}
       }
       if (params.has("title")) {
@@ -170,7 +188,7 @@
         }
       }
     }
-
+    
     function initTimezoneInput() {
       const tzInput = document.getElementById("timezoneInput");
       const tzList = document.getElementById("timezoneList");
@@ -187,7 +205,7 @@
         renderCalendar();
       });
     }
-
+    
     function initCurrentUser() {
       const name = getCurrentName();
       if (!allUserAvailability[name]) {
@@ -196,12 +214,12 @@
       prevName = name;
       renderCombinedUsersList();
     }
-
+    
     function getCurrentName() {
       const val = document.getElementById("nameInput").value.trim();
       return val ? val : "Anonymous";
     }
-
+    
     function setupControls() {
       const nameInput = document.getElementById("nameInput");
       nameInput.addEventListener("focus", () => { prevName = getCurrentName(); });
@@ -220,10 +238,9 @@
           document.getElementById("nameInput").value = finalName;
           renderCombinedUsersList();
         }
-        combinedMode = true;
         renderCalendar(); updateJsonOutput();
       });
-
+      
       document.getElementById("copyJsonBtn").addEventListener("click", () => {
         // Copy the JSON as displayed (custom formatted)
         const jsonStr = customJsonStringify(allUserAvailability);
@@ -238,7 +255,7 @@
           document.body.removeChild(temp);
         }
       });
-
+      
       document.getElementById("copyUrlBtn").addEventListener("click", () => {
         // Only include start and end days in the URL
         const baseJson = btoa(JSON.stringify(allUserAvailability));
@@ -263,7 +280,7 @@
         const newUrl = `${baseUrl}#${hashParts.join("&")}`;
         navigator.clipboard.writeText(newUrl);
       });
-
+      
       document.getElementById("mergeBtn").addEventListener("click", () => {
         const text = document.getElementById("jsonInput").value.trim(); if (!text) return;
         try {
@@ -274,12 +291,11 @@
             while (allUserAvailability[finalName]) { counter++; finalName = `${name}-${counter}`; }
             allUserAvailability[finalName] = avail;
           });
-          combinedMode = true;
           renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
         } catch { alert("Invalid JSON. Expecting object keyed by names."); }
       });
     }
-
+    
     function renderCalendar() {
       const container = document.getElementById("calendarContainer"); container.innerHTML = "";
       const table = document.createElement("table");
@@ -295,7 +311,7 @@
         headerRow.appendChild(th);
       });
       thead.appendChild(headerRow); table.appendChild(thead);
-
+      
       const tbody = document.createElement("tbody");
       const tz = document.getElementById("timezoneInput").value;
       hours.forEach(hour => {
@@ -306,7 +322,7 @@
         labelTh.textContent = localTime;
         labelTh.addEventListener("click", () => toggleRow(hour));
         tr.appendChild(labelTh);
-
+        
         days.forEach(day => {
           const td = document.createElement("td");
           const dayStr = day.toISOString().substring(0, 10);
@@ -329,7 +345,6 @@
             const nextStatus = (cur + 1) % 3;
             if (nextStatus === 0) delete userAvail[dayStr][hh]; else userAvail[dayStr][hh] = nextStatus === 1 ? "not great" : "bad";
             if (userAvail[dayStr] && Object.keys(userAvail[dayStr]).length === 0) delete userAvail[dayStr];
-            combinedMode = true;
             renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
           });
           tr.appendChild(td);
@@ -339,7 +354,7 @@
       table.appendChild(tbody);
       container.appendChild(table);
     }
-
+    
     function getCellData(key) {
       let worst = 0;
       const users = [];
@@ -355,14 +370,14 @@
       });
       return { status: worst, users };
     }
-
+    
     function setCellClass(td, status) {
       td.classList.remove("status-good", "status-notgreat", "status-bad");
       if (status === 0) td.classList.add("status-good");
       else if (status === 1) td.classList.add("status-notgreat");
       else if (status === 2) td.classList.add("status-bad");
     }
-
+    
     function toggleColumn(day) {
       const currentName = getCurrentName();
       const userAvail = allUserAvailability[currentName];
@@ -385,9 +400,9 @@
         }
       });
       if (userAvail[dayStr] && Object.keys(userAvail[dayStr]).length === 0) delete userAvail[dayStr];
-      combinedMode = true; renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+      renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
     }
-
+    
     function toggleRow(hour) {
       const currentName = getCurrentName();
       const userAvail = allUserAvailability[currentName];
@@ -410,9 +425,9 @@
         }
         if (userAvail[dayStr] && Object.keys(userAvail[dayStr]).length === 0) delete userAvail[dayStr];
       });
-      combinedMode = true; renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+      renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
     }
-
+    
     // Custom JSON formatter: indent first 2 levels, then hours on one line
     function customJsonStringify(obj) {
       function isHourDict(val) {
@@ -421,50 +436,50 @@
         const keys = Object.keys(val);
         if (keys.length === 0) return false;
         return keys.every(
-          k => /^\d\d$/.test(k) && (typeof val[k] === "string" || typeof val[k] === "undefined")
+        k => /^\d\d$/.test(k) && (typeof val[k] === "string" || typeof val[k] === "undefined")
         );
       }
-
+      
       function format(obj, level) {
         if (level === 2 && isHourDict(obj)) {
           // Print all hours on one line
           const entries = Object.entries(obj)
-            .map(([k, v]) => `"${k}": ${v === undefined ? "null" : JSON.stringify(v)}`);
+          .map(([k, v]) => `"${k}": ${v === undefined ? "null" : JSON.stringify(v)}`);
           return `{ ${entries.join(", ")} }`;
         }
         if (Array.isArray(obj)) {
           return (
-            "[\n" +
-            obj.map(v => "  ".repeat(level + 1) + format(v, level + 1)).join(",\n") +
-            "\n" +
-            "  ".repeat(level) +
-            "]"
+          "[\n" +
+          obj.map(v => "  ".repeat(level + 1) + format(v, level + 1)).join(",\n") +
+          "\n" +
+          "  ".repeat(level) +
+          "]"
           );
         }
         if (obj && typeof obj === "object") {
           const keys = Object.keys(obj);
           if (keys.length === 0) return "{}";
           return (
-            "{\n" +
-            keys
-              .map(
-                k =>
-                  "  ".repeat(level + 1) +
-                  JSON.stringify(k) +
-                  ": " +
-                  format(obj[k], level + 1)
-              )
-              .join(",\n") +
-            "\n" +
-            "  ".repeat(level) +
-            "}"
+          "{\n" +
+          keys
+          .map(
+          k =>
+          "  ".repeat(level + 1) +
+          JSON.stringify(k) +
+          ": " +
+          format(obj[k], level + 1)
+          )
+          .join(",\n") +
+          "\n" +
+          "  ".repeat(level) +
+          "}"
           );
         }
         return JSON.stringify(obj);
       }
       return format(obj, 0);
     }
-
+    
     function updateJsonOutput() {
       // Use custom formatter for pretty JSON
       const jsonStr = customJsonStringify(allUserAvailability);
@@ -472,7 +487,39 @@
       // Also update the hash when JSON changes (e.g. after merge)
       updateHashFromState();
     }
-
+    
+    function updateHashFromState() {
+      // Build URL hash from current state
+      const hashParts = [];
+      
+      // Add title if present
+      if (pageTitle && pageTitle !== "Availability Calendar") {
+        hashParts.push(`title=${encodeURIComponent(pageTitle)}`);
+      }
+      
+      // Add days range if we have days
+      if (days.length > 0) {
+        hashParts.push(`days=${days[0].toISOString().substring(0,10)},${days[days.length-1].toISOString().substring(0,10)}`);
+      }
+      
+      // Add hours range if not default 24h
+      if (hours.length > 0 && (hours[0] !== 0 || hours[hours.length-1] !== 23)) {
+        hashParts.push(`hours=${hours[0]}-${hours[hours.length-1]}`);
+      }
+      
+      // Add availability data if we have any
+      if (Object.keys(allUserAvailability).length > 0) {
+        const baseJson = btoa(JSON.stringify(allUserAvailability));
+        hashParts.push(`data=${baseJson}`);
+      }
+      
+      // Only update if hash would change to avoid infinite hashchange loop
+      const newHash = hashParts.join("&");
+      if (window.location.hash.substring(1) !== newHash) {
+        window.location.hash = newHash;
+      }
+    }
+    
     // Simple JSON syntax highlighter
     function syntaxHighlight(json) {
       if (!json) return "";
@@ -493,24 +540,34 @@
         return '<span class="' + cls + '">' + match + '</span>';
       });
     }
-
+    
     function renderCombinedUsersList() {
-      const container = document.getElementById("userList"); container.innerHTML = "";
+      const container = document.getElementById("userList"); 
+      container.innerHTML = "";
+      const currentName = getCurrentName();
+      
       Object.keys(allUserAvailability).forEach(name => {
-        const div = document.createElement("div"); div.classList.add("user-item"); div.textContent = name;
+        const div = document.createElement("div"); 
+        div.classList.add("user-item"); 
+        div.textContent = name;
         div.addEventListener("click", () => {
           document.getElementById("nameInput").value = name;
           prevName = name;
+          renderCombinedUsersList();
         });
-        const cross = document.createElement("span"); cross.textContent = "×"; cross.classList.add("remove-user");
-        cross.addEventListener("click", (e) => {
-          e.stopPropagation();
-          if (name === getCurrentName()) return;
-          delete allUserAvailability[name];
-          if (Object.keys(allUserAvailability).length <= 1) combinedMode = false;
-          renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
-        });
-        div.appendChild(cross);
+        
+        if (name != currentName) {
+          const cross = document.createElement("span");
+          cross.textContent = "×";
+          cross.classList.add("remove-user");
+          cross.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (name === currentName) return;
+            delete allUserAvailability[name];
+            renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+          });
+          div.appendChild(cross);
+        }
         container.appendChild(div);
       });
       // New user button
@@ -525,18 +582,17 @@
         allUserAvailability[finalName] = {};
         document.getElementById("nameInput").value = finalName;
         prevName = finalName;
-        combinedMode = true;
         renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
       });
       container.appendChild(newBtn);
     }
-
+    
     function renderPageTitle() {
       const el = document.getElementById("pageTitle");
       el.textContent = pageTitle;
     }
   </script>
   <!-- The following line will be updated by the git hook -->
-<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 04 Jun 2025 17:56:58 +0100 <!-- LAST_COMMIT_TIME: Wed, 04 Jun 2025 17:56:58 +0100 --></div>
+<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 04 Jun 2025 18:30:06 +0100 <!-- LAST_COMMIT_TIME: Wed, 04 Jun 2025 18:30:06 +0100 --></div>
 </body>
 </html>
