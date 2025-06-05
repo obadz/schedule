@@ -112,6 +112,44 @@
     <button id="mergeBtn">Merge Availability</button>
   </div>
   
+  <div style="margin-top:24px; padding:16px; background:#e8f5e9; border:1px solid #a5d6a7; border-radius:6px;">
+    <b>Pro Tips:</b>
+    <ul style="margin: 8px 0 8px 22px;">
+      <li><b>Quick Entry:</b>
+        <ul>
+          <li>Hold Shift while clicking to toggle between Good ↔ Bad only (skipping Not Great)</li>
+          <li>Click and drag to mark multiple cells at once</li>
+          <li>Click column headers or row labels to toggle entire columns/rows</li>
+        </ul>
+      </li>
+      <li><b>Managing Users:</b>
+        <ul>
+          <li>Click a user's name to switch to their perspective and edit their availability</li>
+          <li>Currently selected user's name can be renamed</li>
+          <li>Click 👁️ to hide/show a user's availability (useful when there are many users)</li>
+          <li>Click × to permanently remove a user's data</li>
+          <li>Click "New User" to create another person's schedule</li>
+        </ul>
+      </li>
+      <li><b>Creating a New Meeting:</b>
+        <ul>
+          <li>Add to URL: <code>#title=Meeting Name</code></li>
+          <li>Custom date range: <code>&days=2025-06-01,2025-06-07</code></li>
+          <li>Custom hours: <code>&hours=9-17</code> (24h format, UTC timezone)</li>
+          <li>Example: <code>#title=Team Meeting&days=2025-06-01,2025-06-07&hours=9-17</code></li>
+          <li><i>Note:</i> All times in URL parameters are in UTC, but display is in your selected timezone</li>
+        </ul>
+      </li>
+      <li><b>Collecting Responses:</b>
+        <ul>
+          <li>Each person fills out their availability and sends you their data</li>
+          <li>Paste each person's data into "Merge Availability" to combine responses</li>
+          <li>Or share URL with "Copy URL" to let people see combined availability</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
   <script>
     const STATUS = {
       GOOD: 0,
@@ -823,6 +861,6 @@
     }
   </script>
   <!-- The following line will be updated by the git hook -->
-<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Thu, 05 Jun 2025 14:03:58 +0100 <!-- LAST_COMMIT_TIME: Thu, 05 Jun 2025 14:03:58 +0100 --></div>
+<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Thu, 05 Jun 2025 14:12:41 +0100 <!-- LAST_COMMIT_TIME: Thu, 05 Jun 2025 14:12:41 +0100 --></div>
 </body>
 </html>
