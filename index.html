@@ -334,27 +334,8 @@
         const weekday = day.toLocaleDateString(undefined, {weekday: 'short', timeZone: 'UTC'});
         const dayStr = day.toISOString().substring(0, 10);
         th.innerHTML = `<div>${weekday}</div><div>${dayStr}</div>`;
-        th.addEventListener("mousedown", (e) => {
-          isDragging = true;
-          dragShiftKey = e.shiftKey;
-          const cur = userAvail[dayStr]?.[hours[0].toString().padStart(2, '0')];
-          dragStartStatus = cur === undefined ? 0 : cur === "not great" ? 1 : 2;
-          toggleColumn(day, e.shiftKey);
-          e.preventDefault();
-        });
-        th.addEventListener("mouseover", () => {
-          if (isDragging) {
-            const key = `col:${dayStr}`;
-            if (key !== lastProcessedKey) {
-              lastProcessedKey = key;
-              toggleColumn(day, dragShiftKey);
-            }
-          }
-        });
         th.addEventListener("click", (e) => {
-          if (!isDragging) {
-            toggleColumn(day, e.shiftKey);
-          }
+          toggleColumn(day, e.shiftKey);
         });
         headerRow.appendChild(th);
       });
@@ -368,27 +349,8 @@
         const sample = new Date(Date.UTC(days[0].getUTCFullYear(), days[0].getUTCMonth(), days[0].getUTCDate(), hour));
         const localTime = sample.toLocaleTimeString("en-US", {hour: "2-digit", minute: "2-digit", timeZone: tz, hour12: false});
         labelTh.textContent = localTime;
-        labelTh.addEventListener("mousedown", (e) => {
-          isDragging = true;
-          dragShiftKey = e.shiftKey;
-          const cur = userAvail[days[0].toISOString().substring(0, 10)]?.[hh];
-          dragStartStatus = cur === undefined ? 0 : cur === "not great" ? 1 : 2;
-          toggleRow(hour, e.shiftKey);
-          e.preventDefault();
-        });
-        labelTh.addEventListener("mouseover", () => {
-          if (isDragging) {
-            const key = `row:${hour}`;
-            if (key !== lastProcessedKey) {
-              lastProcessedKey = key;
-              toggleRow(hour, dragShiftKey);
-            }
-          }
-        });
         labelTh.addEventListener("click", (e) => {
-          if (!isDragging) {
-            toggleRow(hour, e.shiftKey);
-          }
+          toggleRow(hour, e.shiftKey);
         });
         tr.appendChild(labelTh);
         
@@ -836,6 +798,6 @@
     }
   </script>
   <!-- The following line will be updated by the git hook -->
-<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Thu, 05 Jun 2025 13:54:25 +0100 <!-- LAST_COMMIT_TIME: Thu, 05 Jun 2025 13:54:25 +0100 --></div>
+<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Thu, 05 Jun 2025 14:00:00 +0100 <!-- LAST_COMMIT_TIME: Thu, 05 Jun 2025 14:00:00 +0100 --></div>
 </body>
 </html>
