@@ -41,9 +41,8 @@
     .status-notgreat { background-color: #ffe0b2; }
     .status-bad { background-color: #ffcdd2; }
     .user-label { display: block; font-size: 10px; }
-    .json-area, .load-area { margin-top: 20px; }
-    /* Rectangle around JSON pretty area */
-    #jsonPretty {
+    .data-area, .load-area { margin-top: 20px; }
+    #dataPretty {
       background: #fafafa;
       border: 1px solid #bbb;
       border-radius: 5px;
@@ -57,12 +56,6 @@
     }
     button { margin-top: 5px; padding: 5px 10px; }
     .page-title { font-size: 2em; margin-bottom: 20px; }
-    /* Simple JSON syntax highlighting */
-    .json-key { color: #1a237e; }
-    .json-string { color: #388e3c; }
-    .json-number { color: #d84315; }
-    .json-boolean { color: #6a1b9a; }
-    .json-null { color: #616161; }
   </style>
 </head>
 <body>
@@ -73,7 +66,7 @@
     <ul style="margin: 8px 0 8px 22px;">
       <li>Fill in your name</li>
       <li>Click on the calendar to mark times that are <span style="background:#ffe0b2; padding:2px 6px; border-radius:3px;">not great</span> or <span style="background:#ffcdd2; padding:2px 6px; border-radius:3px;">bad</span> for you to meet.</li>
-      <li>When done, click <b>Copy Availability</b> and paste it into email to the organizer.</li>
+      <li>When done, click <b>Copy Availability</b> and paste it into email, and send to the organizer. This gives them all the information entered into the calendar.</li>
     </ul>
     <div>
       <b>Legend:</b> Time slot is
@@ -94,16 +87,16 @@
   
   <div id="calendarContainer"></div>
   
-  <div class="json-area">
-    <button id="copyJsonBtn">Copy Availability</button>
+  <div class="data-area">
+    <button id="copyDataBtn">Copy Availability</button>
     <button id="copyUrlBtn">Copy URL</button>
-    <label style="display:block; margin-top:10px;">Availability data (JSON):</label>
-    <pre id="jsonPretty"></pre>
+    <label style="display:block; margin-top:10px;">Availability data (contains all the information displayed on the above calendar):</label>
+    <pre id="dataPretty"></pre>
   </div>
   
   <div class="load-area">
-    <label for="jsonInput">Paste availability JSON to merge:</label>
-    <textarea id="jsonInput" placeholder='{"Alice": {"2025-06-01": {"08": "not great"}}}' style="height: 240px; width: 100%; box-sizing: border-box;"></textarea>
+    <label for="mergeInput">Paste availability data to merge:</label>
+    <textarea id="mergeInput" placeholder="sch..." style="height: 48px; width: 100%; box-sizing: border-box;"></textarea>
     <button id="mergeBtn">Merge Availability</button>
   </div>
   
@@ -114,6 +107,7 @@
     let prevName = "";
     let allTimezones = [];
     let pageTitle = "Availability Calendar";
+    let isInternalHashChange = false;  // Add this flag
     
     function getNextAnonymousName() {
       let base = "Anonymous";
@@ -125,7 +119,7 @@
       }
       return finalName;
     }
-
+    
     document.addEventListener("DOMContentLoaded", () => {
       parseHash();
       renderPageTitle();
@@ -134,9 +128,13 @@
       initCurrentUser();
       renderCalendar();
       setupControls();
-      updateJsonOutput();
+      updateBinaryOutput();
       // Re-parse hash when it changes (e.g., user edits URL and presses enter)
       window.addEventListener("hashchange", () => {
+        if (isInternalHashChange) {
+          isInternalHashChange = false;
+          return;
+        }
         // Reset state
         days = [];
         hours = [];
@@ -147,7 +145,7 @@
         renderPageTitle();
         initCurrentUser();
         renderCalendar();
-        updateJsonOutput();
+        updateBinaryOutput();
       });
     });
     
@@ -187,9 +185,8 @@
       
       if (params.has("data")) {
         try {
-          const decoded = atob(params.get("data"));
-          const obj = JSON.parse(decoded);
-          Object.assign(allUserAvailability, obj);
+          const bytes = base64UrlToUint8Array(params.get("data"));
+          Object.assign(allUserAvailability, parseBinary(bytes));
         } catch {}
       }
       if (params.has("title")) {
@@ -250,17 +247,17 @@
           document.getElementById("nameInput").value = finalName;
           renderCombinedUsersList();
         }
-        renderCalendar(); updateJsonOutput();
+        renderCalendar(); updateBinaryOutput();
       });
       
-      document.getElementById("copyJsonBtn").addEventListener("click", () => {
-        // Copy the JSON as displayed (custom formatted)
-        const jsonStr = customJsonStringify(allUserAvailability);
+      document.getElementById("copyDataBtn").addEventListener("click", () => {
+        const binData = encodeBinary();
+        const base64url = uint8ArrayToBase64Url(binData);
         if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(jsonStr);
+          navigator.clipboard.writeText(base64url);
         } else {
           const temp = document.createElement("textarea");
-          temp.value = jsonStr;
+          temp.value = base64url;
           document.body.appendChild(temp);
           temp.select();
           document.execCommand("copy");
@@ -281,17 +278,19 @@
       });
       
       document.getElementById("mergeBtn").addEventListener("click", () => {
-        const text = document.getElementById("jsonInput").value.trim(); if (!text) return;
-        try {
-          const obj = JSON.parse(text);
-          Object.entries(obj).forEach(([name, avail]) => {
-            let finalName = name;
-            let counter = 1;
-            while (allUserAvailability[finalName]) { counter++; finalName = `${name}-${counter}`; }
-            allUserAvailability[finalName] = avail;
-          });
-          renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
-        } catch { alert("Invalid JSON. Expecting object keyed by names."); }
+        const text = document.getElementById("mergeInput").value.trim(); 
+        if (!text) return;
+        
+        const bytes = base64UrlToUint8Array(text);
+        const obj = parseBinary(bytes);
+        
+        Object.entries(obj).forEach(([name, avail]) => {
+          let finalName = name;
+          let counter = 1;
+          while (allUserAvailability[finalName]) { counter++; finalName = `${name}-${counter}`; }
+          allUserAvailability[finalName] = avail;
+        });
+        renderCalendar(); updateBinaryOutput(); renderCombinedUsersList();
       });
     }
     
@@ -344,7 +343,7 @@
             const nextStatus = (cur + 1) % 3;
             if (nextStatus === 0) delete userAvail[dayStr][hh]; else userAvail[dayStr][hh] = nextStatus === 1 ? "not great" : "bad";
             if (userAvail[dayStr] && Object.keys(userAvail[dayStr]).length === 0) delete userAvail[dayStr];
-            renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+            renderCalendar(); updateBinaryOutput(); renderCombinedUsersList();
           });
           tr.appendChild(td);
         });
@@ -399,7 +398,7 @@
         }
       });
       if (userAvail[dayStr] && Object.keys(userAvail[dayStr]).length === 0) delete userAvail[dayStr];
-      renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+      renderCalendar(); updateBinaryOutput(); renderCombinedUsersList();
     }
     
     function toggleRow(hour) {
@@ -424,66 +423,13 @@
         }
         if (userAvail[dayStr] && Object.keys(userAvail[dayStr]).length === 0) delete userAvail[dayStr];
       });
-      renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+      renderCalendar(); updateBinaryOutput(); renderCombinedUsersList();
     }
     
-    // Custom JSON formatter: indent first 2 levels, then hours on one line
-    function customJsonStringify(obj) {
-      function isHourDict(val) {
-        // Heuristic: all keys are 2-digit numbers (00-23) and values are string or undefined
-        if (!val || typeof val !== "object" || Array.isArray(val)) return false;
-        const keys = Object.keys(val);
-        if (keys.length === 0) return false;
-        return keys.every(
-        k => /^\d\d$/.test(k) && (typeof val[k] === "string" || typeof val[k] === "undefined")
-        );
-      }
-      
-      function format(obj, level) {
-        if (level === 2 && isHourDict(obj)) {
-          // Print all hours on one line
-          const entries = Object.entries(obj)
-          .map(([k, v]) => `"${k}": ${v === undefined ? "null" : JSON.stringify(v)}`);
-          return `{ ${entries.join(", ")} }`;
-        }
-        if (Array.isArray(obj)) {
-          return (
-          "[\n" +
-          obj.map(v => "  ".repeat(level + 1) + format(v, level + 1)).join(",\n") +
-          "\n" +
-          "  ".repeat(level) +
-          "]"
-          );
-        }
-        if (obj && typeof obj === "object") {
-          const keys = Object.keys(obj);
-          if (keys.length === 0) return "{}";
-          return (
-          "{\n" +
-          keys
-          .map(
-          k =>
-          "  ".repeat(level + 1) +
-          JSON.stringify(k) +
-          ": " +
-          format(obj[k], level + 1)
-          )
-          .join(",\n") +
-          "\n" +
-          "  ".repeat(level) +
-          "}"
-          );
-        }
-        return JSON.stringify(obj);
-      }
-      return format(obj, 0);
-    }
-    
-    function updateJsonOutput() {
-      // Use custom formatter for pretty JSON
-      const jsonStr = customJsonStringify(allUserAvailability);
-      document.getElementById("jsonPretty").innerHTML = syntaxHighlight(jsonStr);
-      // Also update the hash when JSON changes (e.g. after merge)
+    function updateBinaryOutput() {
+      const binData = encodeBinary();
+      const base64url = uint8ArrayToBase64Url(binData);
+      document.getElementById("dataPretty").textContent = base64url;
       updateHashFromState();
     }
     
@@ -507,39 +453,150 @@
       
       // Add availability data if we have any
       if (Object.keys(allUserAvailability).length > 0) {
-        const baseJson = btoa(JSON.stringify(allUserAvailability));
-        hashParts.push(`data=${baseJson}`);
+        const binData = encodeBinary();
+        const base64url = uint8ArrayToBase64Url(binData);
+        hashParts.push(`data=${base64url}`);
       }
       
       return hashParts.join("&");
     }
-
+    
     function updateHashFromState() {
       const newHash = getStateHash();
       if (window.location.hash.substring(1) !== newHash) {
+        isInternalHashChange = true;
         window.location.hash = newHash;
       }
     }
     
-    // Simple JSON syntax highlighter
-    function syntaxHighlight(json) {
-      if (!json) return "";
-      json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-        let cls = "json-number";
-        if (/^"/.test(match)) {
-          if (/:$/.test(match)) {
-            cls = "json-key";
-          } else {
-            cls = "json-string";
+    function encodeBinaryInner(availability ) {
+      const bytes = [];
+      bytes.push(0xB1, 0xC8);
+      const baseDate = Math.floor(days[0].getTime() / 86400000);
+      bytes.push((baseDate >> 8) & 0xFF, baseDate & 0xFF);
+      const participants = Object.keys(availability);
+      bytes.push(participants.length);
+      
+      for (const name of participants) {
+        const nameBytes = new TextEncoder().encode(name);
+        bytes.push(nameBytes.length);
+        bytes.push(...nameBytes);
+        const dates = Object.keys(availability[name]).sort();
+        bytes.push(dates.length);
+        
+        for (const date of dates) {
+          const dateObj = new Date(date);
+          let offset = Math.floor(dateObj.getTime() / 86400000) - baseDate;
+          
+          // Create bitmasks and check if they're needed
+          const badMask = new Uint8Array(3);
+          const notGreatMask = new Uint8Array(3);
+          let hasBad = false;
+          let hasNotGreat = false;
+          
+          for (let h = 0; h < 24; h++) {
+            const hh = h.toString().padStart(2, '0');
+            const status = availability[name][date][hh];
+            if (status === "bad") {
+              badMask[Math.floor(h/8)] |= (1 << (h%8));
+              hasBad = true;
+            } else if (status === "not great") {
+              notGreatMask[Math.floor(h/8)] |= (1 << (h%8));
+              hasNotGreat = true;
+            }
           }
-        } else if (/true|false/.test(match)) {
-          cls = "json-boolean";
-        } else if (/null/.test(match)) {
-          cls = "json-null";
+          
+          // Set flags in offset
+          if (hasBad) offset |= 0x80;      // Set leftmost bit
+          if (hasNotGreat) offset |= 0x40;  // Set second leftmost bit
+          
+          bytes.push(offset);
+          if (hasBad) bytes.push(...badMask);
+          if (hasNotGreat) bytes.push(...notGreatMask);
         }
-        return '<span class="' + cls + '">' + match + '</span>';
-      });
+      }
+      
+      bytes.push(0x5E, 0x76);
+      
+      return new Uint8Array(bytes);
+    } 
+    
+    function encodeBinary() {  
+      const encoded = encodeBinaryInner(allUserAvailability);  
+      const decoded = parseBinary(encoded)
+      const encodedAgain = encodeBinaryInner(decoded);
+      
+      if (indexedDB.cmp(encoded, encodedAgain) !== 0) {
+        console.error("Binary encoding failed:", encoded, encodedAgain);
+      }
+      
+      return encoded;
+    }
+    
+    function parseBinary(bytes) {
+      if (bytes.length < 6) { // Minimum length: magic(2) + date(2) + participants(1) + magic(2)
+        throw new Error("Binary data too short");
+      }
+      
+      const result = {};
+      let pos = 0;
+      
+      if (bytes[pos++] !== 0xB1 || bytes[pos++] !== 0xC8) {
+        throw new Error("Invalid binary format");
+      }
+      
+      const baseDate = (bytes[pos++] << 8) | bytes[pos++];
+      const numParticipants = bytes[pos++];
+      
+      for (let i = 0; i < numParticipants; i++) {
+        const nameLen = bytes[pos++];
+        const name = new TextDecoder().decode(bytes.slice(pos, pos + nameLen));
+        pos += nameLen;
+        
+        result[name] = {};
+        const numDates = bytes[pos++];
+        
+        for (let j = 0; j < numDates; j++) {
+          const offsetByte = bytes[pos++];
+          const hasBad = (offsetByte & 0x80) !== 0;
+          const hasNotGreat = (offsetByte & 0x40) !== 0;
+          const offset = offsetByte & 0x3F;  // Clear flag bits
+          
+          const date = new Date((baseDate + offset) * 86400000);
+          const dateStr = date.toISOString().substring(0, 10);
+          result[name][dateStr] = {};
+          
+          if (hasBad) {
+            const badMask = bytes.slice(pos, pos + 3);
+            pos += 3;
+            for (let h = 0; h < 24; h++) {
+              const byteIndex = Math.floor(h/8);
+              const bitMask = 1 << (h%8);
+              if (badMask[byteIndex] & bitMask) {
+                result[name][dateStr][h.toString().padStart(2, '0')] = "bad";
+              }
+            }
+          }
+          
+          if (hasNotGreat) {
+            const notGreatMask = bytes.slice(pos, pos + 3);
+            pos += 3;
+            for (let h = 0; h < 24; h++) {
+              const byteIndex = Math.floor(h/8);
+              const bitMask = 1 << (h%8);
+              if (notGreatMask[byteIndex] & bitMask) {
+                result[name][dateStr][h.toString().padStart(2, '0')] = "not great";
+              }
+            }
+          }
+        }
+      }
+      
+      if (bytes[pos++] !== 0x5E || bytes[pos++] !== 0x76) {
+        throw new Error("Invalid binary format");
+      }
+      
+      return result;
     }
     
     function renderCombinedUsersList() {
@@ -565,7 +622,7 @@
             e.stopPropagation();
             if (name === currentName) return;
             delete allUserAvailability[name];
-            renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+            renderCalendar(); updateBinaryOutput(); renderCombinedUsersList();
           });
           div.appendChild(cross);
         }
@@ -580,7 +637,7 @@
         allUserAvailability[finalName] = {};
         document.getElementById("nameInput").value = finalName;
         prevName = finalName;
-        renderCalendar(); updateJsonOutput(); renderCombinedUsersList();
+        renderCalendar(); updateBinaryOutput(); renderCombinedUsersList();
       });
       container.appendChild(newBtn);
     }
@@ -590,8 +647,36 @@
       document.title = title;
       document.getElementById("pageTitle").textContent = title;
     }
+    
+    // New utility functions
+    function base64UrlEncode(str) {
+      return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+    
+    function base64UrlDecode(str) {
+      str = str.replace(/-/g, '+').replace(/_/g, '/');
+      while (str.length % 4) str += '=';
+      return atob(str);
+    }
+    
+    function uint8ArrayToBase64Url(uint8arr) {
+      let binaryStr = '';
+      for (let i = 0; i < uint8arr.length; i++) {
+        binaryStr += String.fromCharCode(uint8arr[i]);
+      }
+      return base64UrlEncode(binaryStr);
+    }
+    
+    function base64UrlToUint8Array(base64url) {
+      const binary = base64UrlDecode(base64url);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    }
   </script>
   <!-- The following line will be updated by the git hook -->
-<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 04 Jun 2025 19:11:36 +0100 <!-- LAST_COMMIT_TIME: Wed, 04 Jun 2025 19:11:36 +0100 --></div>
+<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Thu, 05 Jun 2025 12:32:30 +0100 <!-- LAST_COMMIT_TIME: Thu, 05 Jun 2025 12:32:30 +0100 --></div>
 </body>
 </html>
