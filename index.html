@@ -11,7 +11,7 @@
     #userList { margin-left: 20px; display: flex; flex-wrap: wrap; }
     .user-item { 
       display: inline-block; 
-      padding: 5px 28px 5px 10px; 
+      padding: 5px 48px 5px 10px;  /* Increase right padding to accommodate two icons */
       margin: 0 5px; 
       background-color: #f0f0f0; 
       border-radius: 4px; 
@@ -31,6 +31,18 @@
       font-weight: bold;
       font-size: 18px;
       opacity: 0.7;
+    }
+    .user-item .toggle-visible {
+      position: absolute;
+      top: 0px;
+      right: 20px;
+      width: 28px;
+      height: 28px;
+      line-height: 28px;
+      text-align: center;
+      cursor: pointer;
+      opacity: 0.7;
+      font-size: 16px;
     }
     .new-user-btn { padding: 5px 10px; margin: 0 5px; background-color: #d0d0d0; border-radius: 4px; cursor: pointer; }
     table { border-collapse: collapse; width: 100%; margin-top: 20px; }
@@ -104,6 +116,7 @@
     let days = []; // will now be array of Date objects
     let hours = [];
     const allUserAvailability = {};
+    const hiddenUsers = new Set();  // Track which users are hidden
     let prevName = "";
     let allTimezones = [];
     let pageTitle = "Availability Calendar";
@@ -357,6 +370,7 @@
       let worst = 0;
       const users = [];
       Object.entries(allUserAvailability).forEach(([name, avail]) => {
+        if (hiddenUsers.has(name)) return; // Skip hidden users
         const [day, hh] = key.split("|");
         const dayObj = avail[day] || {};
         const statusStr = dayObj[hh];
@@ -608,13 +622,24 @@
         const div = document.createElement("div"); 
         div.classList.add("user-item"); 
         div.textContent = name;
-        div.addEventListener("click", () => {
-          document.getElementById("nameInput").value = name;
-          prevName = name;
-          renderCombinedUsersList();
-        });
         
-        if (name != currentName) {
+        if (name !== currentName) {
+          const eye = document.createElement("span");
+          eye.classList.add("toggle-visible");
+          eye.textContent = hiddenUsers.has(name) ? "👁️‍🗨️" : "👁️";
+          eye.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (hiddenUsers.has(name)) {
+              hiddenUsers.delete(name);
+              eye.textContent = "👁️";
+            } else {
+              hiddenUsers.add(name);
+              eye.textContent = "👁️‍🗨️";
+            }
+            renderCalendar();
+          });
+          div.appendChild(eye);
+          
           const cross = document.createElement("span");
           cross.textContent = "×";
           cross.classList.add("remove-user");
@@ -626,6 +651,15 @@
           });
           div.appendChild(cross);
         }
+        div.addEventListener("click", () => {
+          document.getElementById("nameInput").value = name;
+          prevName = name;
+          if (hiddenUsers.has(name)) { // Show user when selected
+            hiddenUsers.delete(name);
+          }
+          renderCombinedUsersList();
+          renderCalendar();
+        });
         container.appendChild(div);
       });
       // New user button
@@ -677,6 +711,6 @@
     }
   </script>
   <!-- The following line will be updated by the git hook -->
-<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Thu, 05 Jun 2025 12:32:30 +0100 <!-- LAST_COMMIT_TIME: Thu, 05 Jun 2025 12:32:30 +0100 --></div>
+<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Thu, 05 Jun 2025 12:44:04 +0100 <!-- LAST_COMMIT_TIME: Thu, 05 Jun 2025 12:44:04 +0100 --></div>
 </body>
 </html>
