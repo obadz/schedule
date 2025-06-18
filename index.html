@@ -6,10 +6,20 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14'>📅</text></svg>">
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
-    .controls { margin-bottom: 20px; display: flex; align-items: center; flex-wrap: wrap; }
+    .controls { 
+      margin-bottom: 10px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between;
+      flex-wrap: wrap; 
+    }
     label { margin-right: 10px; }
     select, input[type="text"], input[list] { margin-right: 20px; padding: 5px; }
-    #userList { margin-left: 20px; display: flex; flex-wrap: wrap; }
+    #userList { 
+      display: flex; 
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
     .user-item { 
       display: inline-block; 
       padding: 5px 48px 5px 10px;  /* Increase right padding to accommodate two icons */
@@ -74,6 +84,75 @@
     }
     button { margin-top: 5px; padding: 5px 10px; }
     .page-title { font-size: 2em; margin-bottom: 20px; }
+    
+    /* Settings button and modal styles */
+    .settings-btn {
+      padding: 5px 10px;
+      margin: 0 5px;
+      background-color: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    .modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      z-index: 1001;
+      min-width: 300px;
+    }
+    .modal h3 {
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+    .modal-form-group {
+      margin-bottom: 12px;
+    }
+    .modal-form-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: bold;
+    }
+    .modal-form-group input {
+      width: 100%;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .modal-buttons button {
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .modal-buttons button.primary {
+      background: #1976d2;
+      color: white;
+      border-color: #1565c0;
+    }
   </style>
 </head>
 <body>
@@ -82,7 +161,7 @@
   <div style="margin-bottom:18px; padding:12px; background:#f9fbe7; border:1px solid #e6ee9c; border-radius:6px;">
     <b>Instructions:</b>
     <ul style="margin: 8px 0 8px 22px;">
-      <li><i>Note:</i> This tool is optimized for use on a desktop browser, not on a mobile device!</li>
+      <li><i>Note:</i> This tool is optimized for use on a desktop browser, not on mobile devices!</li>
       <li>Fill in your name</li>
       <li>Click on the calendar to mark times that are <span style="background:#ffe0b2; padding:2px 6px; border-radius:3px;">not great</span> or <span style="background:#ffcdd2; padding:2px 6px; border-radius:3px;">bad</span> for you to meet.</li>
       <li>When done, click <b>Copy Availability</b> and paste it into email, and send to the organizer. This gives them all the information entered into the calendar.</li>
@@ -96,13 +175,16 @@
   </div>
   
   <div class="controls">
-    <label for="timezoneInput">Timezone:</label>
-    <input list="timezoneList" id="timezoneInput" placeholder="Search timezones">
-    <datalist id="timezoneList"></datalist>
-    <label for="nameInput">Name:</label>
-    <input type="text" id="nameInput" placeholder="Your name">
-    <div id="userList"></div>
+    <div style="display: flex; align-items: center; flex: 1;">
+      <label for="timezoneInput">Timezone:</label>
+      <input list="timezoneList" id="timezoneInput" placeholder="Search timezones">
+      <datalist id="timezoneList"></datalist>
+      <label for="nameInput">Name:</label>
+      <input type="text" id="nameInput" placeholder="Your name">
+    </div>
+    <button class="settings-btn" id="settingsBtn">⚙️ Meeting Settings</button>
   </div>
+  <div id="userList"></div>
   
   <div id="calendarContainer"></div>
   
@@ -140,11 +222,10 @@
       </li>
       <li><b>Creating a New Meeting:</b>
         <ul>
-          <li>Add to URL: <code>#title=Meeting Name</code></li>
-          <li>Custom date range: <code>&days=2025-06-01,2025-06-07</code></li>
-          <li>Custom hours: <code>&hours=9-17</code> (24h format, UTC timezone)</li>
-          <li>Example: <code>#title=Team Meeting&days=2025-06-01,2025-06-07&hours=9-17</code></li>
-          <li><i>Note:</i> All times in URL parameters are in UTC, but display is in your selected timezone</li>
+          <li>Click the ⚙️ Meeting Settings button to:</li>
+          <li>Set meeting title</li>
+          <li>Choose custom date range</li>
+          <li>Set meeting hours (in UTC, with local time preview underneath)</li>
         </ul>
       </li>
       <li><b>Collecting Responses:</b>
@@ -156,7 +237,40 @@
       </li>
     </ul>
   </div>
-
+  
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <h3>Meeting Settings</h3>
+      <div class="modal-form-group">
+        <label for="meetingTitle">Meeting Title</label>
+        <input type="text" id="meetingTitle" placeholder="Enter meeting title">
+      </div>
+      <div class="modal-form-group">
+        <label for="dateStart">Date Range</label>
+        <input type="date" id="dateStart" style="width:45%">
+        <span style="margin:0 10px">to</span>
+        <input type="date" id="dateEnd" style="width:45%">
+      </div>
+      <div class="modal-form-group">
+        <label for="hoursStart">Hours Range (UTC)</label>
+        <div style="margin-bottom:4px">
+          <input type="number" id="hoursStart" min="0" max="23" style="width:45%" oninput="updateLocalTimeDisplay()">
+          <span style="margin:0 10px">to</span>
+          <input type="number" id="hoursEnd" min="0" max="23" style="width:45%" oninput="updateLocalTimeDisplay()">
+        </div>
+        <div style="color:#666; font-size:0.9em">
+          Local time (<span id="settingsTimezone"></span>): 
+          <span id="localStartTime"></span> to <span id="localEndTime"></span>
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button onclick="closeSettingsModal()">Cancel</button>
+        <button class="primary" onclick="saveSettings()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+  
   <script>
     const STATUS = {
       GOOD: 0,
@@ -374,7 +488,75 @@
         });
         renderCalendar(); updateBinaryOutput(); renderCombinedUsersList();
       });
+      
+      // Add settings button handler
+      document.getElementById("settingsBtn").addEventListener("click", openSettingsModal);
     }
+    
+    function openSettingsModal() {
+      const modal = document.getElementById("settingsModal");
+      const titleInput = document.getElementById("meetingTitle");
+      const dateStart = document.getElementById("dateStart");
+      const dateEnd = document.getElementById("dateEnd");
+      const hoursStart = document.getElementById("hoursStart");
+      const hoursEnd = document.getElementById("hoursEnd");
+      
+      // Fill current values
+      titleInput.value = pageTitle || "";
+      dateStart.value = days[0].toISOString().split('T')[0];
+      dateEnd.value = days[days.length-1].toISOString().split('T')[0];
+      hoursStart.value = hours[0];
+      hoursEnd.value = hours[hours.length-1];
+      
+      // Set timezone and update local times
+      document.getElementById("settingsTimezone").textContent = 
+      document.getElementById("timezoneInput").value;
+      updateLocalTimeDisplay();
+      
+      modal.style.display = "block";
+    }
+    
+    function closeSettingsModal() {
+      document.getElementById("settingsModal").style.display = "none";
+    }
+    
+    function saveSettings() {
+      const titleInput = document.getElementById("meetingTitle");
+      const dateStart = document.getElementById("dateStart");
+      const dateEnd = document.getElementById("dateEnd");
+      const hoursStart = document.getElementById("hoursStart");
+      const hoursEnd = document.getElementById("hoursEnd");
+      
+      // Update title
+      pageTitle = titleInput.value.trim();
+      
+      // Update days
+      days = [];
+      let start = new Date(dateStart.value);
+      let end = new Date(dateEnd.value);
+      while (start <= end) {
+        days.push(new Date(start));
+        start.setDate(start.getDate() + 1);
+      }
+      
+      // Update hours
+      hours = [];
+      for (let h = parseInt(hoursStart.value); h <= parseInt(hoursEnd.value); h++) {
+        hours.push(h);
+      }
+      
+      renderPageTitle();
+      renderCalendar();
+      updateBinaryOutput();
+      closeSettingsModal();
+    }
+    
+    // Add click-outside-to-close handler
+    document.getElementById("settingsModal").addEventListener("click", function(e) {
+      if (e.target === this) {
+        closeSettingsModal();
+      }
+    });
     
     function createCalendarCell(day, hour, userAvail) {
       const td = document.createElement("td");
@@ -869,8 +1051,47 @@
       }
       return bytes;
     }
+    
+    function updateLocalTimeDisplay() {
+      const hoursStart = document.getElementById("hoursStart");
+      const hoursEnd = document.getElementById("hoursEnd");
+      const tz = document.getElementById("timezoneInput").value;
+      
+      // Create sample date using first day in calendar
+      const sampleDate = days[0];
+      
+      // Convert UTC hours to local times
+      const startUTC = new Date(Date.UTC(
+      sampleDate.getUTCFullYear(),
+      sampleDate.getUTCMonth(),
+      sampleDate.getUTCDate(),
+      parseInt(hoursStart.value) || 0
+      ));
+      const endUTC = new Date(Date.UTC(
+      sampleDate.getUTCFullYear(),
+      sampleDate.getUTCMonth(),
+      sampleDate.getUTCDate(),
+      parseInt(hoursEnd.value) || 0
+      ));
+      
+      // Display local times
+      document.getElementById("localStartTime").textContent = 
+      startUTC.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: tz,
+        hour12: false
+      });
+      document.getElementById("localEndTime").textContent = 
+      endUTC.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: tz,
+        hour12: false
+      });
+    }
   </script>
   <!-- The following line will be updated by the git hook -->
-<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Mon, 09 Jun 2025 17:23:07 +0100 <!-- LAST_COMMIT_TIME: Mon, 09 Jun 2025 17:23:07 +0100 --></div>
+<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 18 Jun 2025 16:24:58 +0100 <!-- LAST_COMMIT_TIME: Wed, 18 Jun 2025 16:24:58 +0100 --></div>
 </body>
 </html>
