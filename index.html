@@ -48,6 +48,12 @@
       font-size: 18px;
       opacity: 0.7;
     }
+    .user-item.selected .remove-user,
+    .user-item.selected .toggle-visible {
+      opacity: 0.2;
+      cursor: default;
+      pointer-events: none;
+    }
     .user-item .toggle-visible {
       position: absolute;
       top: 0px;
@@ -975,34 +981,34 @@
         }
         div.textContent = name;
         
-        if (name !== currentName) {
-          const eye = document.createElement("span");
-          eye.classList.add("toggle-visible");
-          eye.textContent = hiddenUsers.has(name) ? "👁️‍🗨️" : "👁️";
-          eye.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (hiddenUsers.has(name)) {
-              hiddenUsers.delete(name);
-              eye.textContent = "👁️";
-            } else {
-              hiddenUsers.add(name);
-              eye.textContent = "👁️‍🗨️";
-            }
-            renderCalendar();
-          });
-          div.appendChild(eye);
-          
-          const cross = document.createElement("span");
-          cross.textContent = "×";
-          cross.classList.add("remove-user");
-          cross.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (name === currentName) return;
-            delete allUserAvailability[name];
-            renderCalendar(); updateBinaryOutput(); renderCombinedUsersList();
-          });
-          div.appendChild(cross);
-        }
+        const eye = document.createElement("span");
+        eye.classList.add("toggle-visible");
+        eye.textContent = hiddenUsers.has(name) ? "👁️‍🗨️" : "👁️";
+        eye.addEventListener("click", (e) => {
+          if (name === currentName) return;
+          e.stopPropagation();
+          if (hiddenUsers.has(name)) {
+            hiddenUsers.delete(name);
+            eye.textContent = "👁️";
+          } else {
+            hiddenUsers.add(name);
+            eye.textContent = "👁️‍🗨️";
+          }
+          renderCalendar();
+        });
+        div.appendChild(eye);
+        
+        const cross = document.createElement("span");
+        cross.textContent = "×";
+        cross.classList.add("remove-user");
+        cross.addEventListener("click", (e) => {
+          if (name === currentName) return;
+          e.stopPropagation();
+          delete allUserAvailability[name];
+          renderCalendar(); updateBinaryOutput(); renderCombinedUsersList();
+        });
+        div.appendChild(cross);
+        
         div.addEventListener("click", () => {
           document.getElementById("nameInput").value = name;
           prevName = name;
@@ -1102,6 +1108,6 @@
     }
   </script>
   <!-- The following line will be updated by the git hook -->
-<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Tue, 19 Aug 2025 11:13:20 +0200 <!-- LAST_COMMIT_TIME: Tue, 19 Aug 2025 11:13:20 +0200 --></div>
+<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Tue, 19 Aug 2025 11:20:47 +0200 <!-- LAST_COMMIT_TIME: Tue, 19 Aug 2025 11:20:47 +0200 --></div>
 </body>
 </html>
