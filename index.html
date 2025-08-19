@@ -85,6 +85,16 @@
     button { margin-top: 5px; padding: 5px 10px; }
     .page-title { font-size: 2em; margin-bottom: 20px; }
     
+    /* Pro Tips status indicators */
+    .status-indicator {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    .status-indicator.good { background-color: #c8e6c9; }
+    .status-indicator.notgreat { background-color: #ffe0b2; }
+    .status-indicator.bad { background-color: #ffcdd2; }
+    
     /* Settings button and modal styles */
     .settings-btn {
       padding: 5px 10px;
@@ -163,14 +173,14 @@
     <ul style="margin: 8px 0 8px 22px;">
       <li><i>Note:</i> This tool is optimized for use on a desktop browser, not on mobile devices!</li>
       <li>Fill in your name</li>
-      <li>Click on the calendar to mark times that are <span style="background:#ffe0b2; padding:2px 6px; border-radius:3px;">not great</span> or <span style="background:#ffcdd2; padding:2px 6px; border-radius:3px;">bad</span> for you to meet.</li>
-      <li>When done, click <b>Copy Availability</b> and paste it into email, and send to the organizer. This gives them all the information entered into the calendar.</li>
+      <li>Click on the calendar to mark times that are <span class="status-indicator notgreat">Not great</span> or <span class="status-indicator bad">Bad</span> for you to meet.</li>
+      <li>When done, click <b>Copy Availability</b> and paste it into a message to the organizer. This gives them all the information entered into the calendar.</li>
     </ul>
     <div>
       <b>Legend:</b> Time slot is
-      <span style="display:inline-block; background:#c8e6c9; width:18px; height:18px; border:1px solid #ccc; vertical-align:middle; margin:0 4px 0 12px;"></span> Good &nbsp;
-      <span style="display:inline-block; background:#ffe0b2; width:18px; height:18px; border:1px solid #ccc; vertical-align:middle; margin:0 4px 0 12px;"></span> Not great &nbsp;
-      <span style="display:inline-block; background:#ffcdd2; width:18px; height:18px; border:1px solid #ccc; vertical-align:middle; margin:0 4px 0 12px;"></span> Bad
+      <span class="status-indicator good">Good</span>&nbsp
+      <span class="status-indicator notgreat">Not great</span>&nbsp;
+      <span class="status-indicator bad">Bad</span>
     </div>
   </div>
   
@@ -201,12 +211,12 @@
     <button id="mergeBtn">Merge Availability</button>
   </div>
   
-  <div style="margin-top:24px; padding:16px; background:#e8f5e9; border:1px solid #a5d6a7; border-radius:6px;">
+  <div style="margin-top:24px; padding:16px; background:#e3f2fd; border:1px solid #90caf9; border-radius:6px;">
     <b>Pro Tips:</b>
     <ul style="margin: 8px 0 8px 22px;">
       <li><b>Quick Entry:</b>
         <ul>
-          <li>Hold Shift while clicking to toggle between Good ↔ Bad only (skipping Not Great)</li>
+          <li>Hold Shift while clicking to toggle between <span class="status-indicator good">Good</span> ↔ <span class="status-indicator bad">Bad</span> only (skipping <span class="status-indicator notgreat">Not Great</span>)</li>
           <li>Click and drag to mark multiple cells at once</li>
           <li>Click column headers or row labels to toggle entire columns/rows</li>
         </ul>
@@ -1092,6 +1102,6 @@
     }
   </script>
   <!-- The following line will be updated by the git hook -->
-<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Wed, 18 Jun 2025 16:24:58 +0100 <!-- LAST_COMMIT_TIME: Wed, 18 Jun 2025 16:24:58 +0100 --></div>
+<div style="text-align:center;color:#888;font-size:13px;margin-top:32px;">Last updated: Tue, 19 Aug 2025 11:13:20 +0200 <!-- LAST_COMMIT_TIME: Tue, 19 Aug 2025 11:13:20 +0200 --></div>
 </body>
 </html>
